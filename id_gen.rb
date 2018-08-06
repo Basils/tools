@@ -19,7 +19,7 @@ def load_data
 	return data
 end
 
-def allocate()
+def allocate(desc)
 	data=load_data
 	ids = Array.new(@range.last+1 - @range.first ,true)
 	data['active_ids'].each { |k,v| ids[k.to_i-@range.first] = false }
@@ -27,7 +27,10 @@ def allocate()
 		return -1
 	end
 	id = ids.index(true) + @range.first
-	data['active_ids'][id] = Time.now.to_i
+	data['active_ids'][id] = {
+				"desc" => desc,
+				 "time" => Time.now.to_i
+	}
 	save_json(data) 
 	return id
 	
@@ -50,14 +53,12 @@ end
  
 def release_timeouts()
 	data=load_data()
-	puts data
 	if(data['active_ids'].empty?)
 		return
 	end
 	now = Time.now.to_i
-	data['active_ids'].delete_if {|k,v| (now - v).to_i > (@timeout *24 * 60*60)}
+	data['active_ids'].delete_if {|k,v| (now - v['time']).to_i > (@timeout *24 * 60*60)}
 	save_json(data)
-	puts data
 end
 
 
@@ -81,7 +82,9 @@ ARGV << '-h' if ARGV.empty?
 		end
 		@options[:free] = f
 	end
-	
+	opts.on('-d', '--description [string]', String, "Description") do |d|
+		@options[:Description] = d
+	end	
 	opts.on('-h', '--help' , 'Show this message') do 
 		puts opts
 		exit
@@ -95,7 +98,7 @@ rescue OptionParser::InvalidArgument , OptionParser::MissingArgument
 end
 if(@options[:allocate])
 	release_timeouts
-	puts allocate
+	puts allocate(@options[:Description])
 else #free
 	release(@options[:free])
 	release_timeouts
